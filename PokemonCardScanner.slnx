@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PokemonCardScanner.API/PokemonCardScanner.API.csproj" />
+    <Project Path="src/PokemonCardScanner.Infrastructure/PokemonCardScanner.Infrastructure.csproj" />
+    <Project Path="src/PokemonCardScanner.MAUI/PokemonCardScanner.MAUI.csproj" />
+    <Project Path="src/PokemonCardScanner.Shared/PokemonCardScanner.Shared.csproj" />
+  </Folder>
+</Solution>

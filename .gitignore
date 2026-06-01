@@ -1,0 +1,30 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.userprefs
+.idea/
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Secrets — never commit these
+appsettings.Development.json
+appsettings.Production.json
+**/secrets.json
+
+## Build outputs
+publish/
+*.publish.xml
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini

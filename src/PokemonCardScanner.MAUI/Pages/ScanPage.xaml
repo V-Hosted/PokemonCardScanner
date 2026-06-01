@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PokemonCardScanner.MAUI.ViewModels"
+             x:Class="PokemonCardScanner.MAUI.Pages.ScanPage"
+             x:DataType="vm:ScanViewModel"
+             Title="Scan a Card">
+
+    <Grid RowDefinitions="*, Auto" Padding="20">
+
+        <VerticalStackLayout Grid.Row="0" Spacing="16" VerticalOptions="Center">
+
+            <Label Text="Pokemon Card Scanner"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center" />
+
+            <Label Text="Point your camera at a Pokemon card to look up its recent eBay sale prices."
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center"
+                   TextColor="Gray" />
+
+            <Image Source="{Binding CapturedImage}"
+                   HeightRequest="250"
+                   Aspect="AspectFit"
+                   IsVisible="{Binding CapturedImage, Converter={StaticResource NullToBoolConverter}}" />
+
+            <ActivityIndicator IsRunning="{Binding IsScanning}"
+                               IsVisible="{Binding IsScanning}"
+                               HorizontalOptions="Center" />
+
+            <Label Text="{Binding StatusMessage}"
+                   HorizontalOptions="Center"
+                   TextColor="Gray"
+                   IsVisible="{Binding StatusMessage, Converter={StaticResource NullToBoolConverter}}" />
+
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" Spacing="12">
+
+            <Button Text="Take Photo"
+                    Command="{Binding TakePhotoCommand}"
+                    IsEnabled="{Binding IsScanning, Converter={StaticResource InvertBoolConverter}}"
+                    BackgroundColor="#E3350D"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="52" />
+
+            <Button Text="Choose from Library"
+                    Command="{Binding PickPhotoCommand}"
+                    IsEnabled="{Binding IsScanning, Converter={StaticResource InvertBoolConverter}}"
+                    BackgroundColor="#2A75BB"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="52" />
+
+        </VerticalStackLayout>
+
+    </Grid>
+</ContentPage>

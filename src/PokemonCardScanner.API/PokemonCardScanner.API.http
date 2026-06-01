@@ -1,0 +1,6 @@
+@PokemonCardScanner.API_HostAddress = http://localhost:5109
+
+GET {{PokemonCardScanner.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
