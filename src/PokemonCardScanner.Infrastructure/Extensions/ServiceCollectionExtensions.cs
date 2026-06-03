@@ -17,7 +17,6 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<IPokemonTcgService, PokemonTcgService>();
 
         services.AddScoped<ICardRecognitionService, CardRecognitionService>();
-        services.AddScoped<IEbayService, EbayService>();
         services.AddScoped<CardScanOrchestrator>();
 
         return services;

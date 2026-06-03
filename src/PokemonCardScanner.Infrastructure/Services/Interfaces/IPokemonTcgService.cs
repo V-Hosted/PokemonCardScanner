@@ -4,5 +4,6 @@ namespace PokemonCardScanner.Infrastructure.Services.Interfaces;
 
 public interface IPokemonTcgService
 {
-    Task<PokemonCard?> FindCardAsync(string name, string? collectorNumber, string? setCode);
+    Task<(PokemonCard? Card, List<CardPrice> Prices)> FindCardAsync(
+        string name, string? collectorNumber, string? setCode);
 }

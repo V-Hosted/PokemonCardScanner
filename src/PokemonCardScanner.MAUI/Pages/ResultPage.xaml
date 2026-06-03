@@ -14,13 +14,10 @@
             <VerticalStackLayout IsVisible="{Binding HasCard, Converter={StaticResource InvertBoolConverter}}"
                                  Spacing="12">
                 <Label Text="Card Not Found"
-                       FontSize="22"
-                       FontAttributes="Bold"
-                       HorizontalOptions="Center"
-                       TextColor="#E3350D" />
+                       FontSize="22" FontAttributes="Bold"
+                       HorizontalOptions="Center" TextColor="#E3350D" />
                 <Label Text="{Binding ScanResult.ErrorMessage}"
-                       HorizontalOptions="Center"
-                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center" HorizontalTextAlignment="Center"
                        TextColor="Gray" />
             </VerticalStackLayout>
 
@@ -28,82 +25,79 @@
             <VerticalStackLayout IsVisible="{Binding HasCard}" Spacing="12">
 
                 <Image Source="{Binding Card.ImageUrl}"
-                       HeightRequest="280"
-                       Aspect="AspectFit"
+                       HeightRequest="280" Aspect="AspectFit"
                        HorizontalOptions="Center" />
 
                 <Label Text="{Binding Card.Name}"
-                       FontSize="24"
-                       FontAttributes="Bold"
+                       FontSize="24" FontAttributes="Bold"
                        HorizontalOptions="Center" />
 
                 <Label Text="{Binding Card.SetName, StringFormat='Set: {0}'}"
-                       HorizontalOptions="Center"
-                       TextColor="Gray" />
+                       HorizontalOptions="Center" TextColor="Gray" />
 
                 <Label Text="{Binding Card.CollectorNumber, StringFormat='#{0}'}"
-                       HorizontalOptions="Center"
-                       TextColor="Gray" />
+                       HorizontalOptions="Center" TextColor="Gray" />
 
                 <Label Text="{Binding Card.Rarity}"
-                       HorizontalOptions="Center"
-                       TextColor="DarkSlateGray" />
+                       HorizontalOptions="Center" TextColor="DarkSlateGray" />
 
-                <!-- eBay prices -->
+                <!-- Prices -->
                 <BoxView HeightRequest="1" Color="LightGray" Margin="0,8" />
 
-                <Label Text="Recent eBay Sales"
-                       FontSize="18"
-                       FontAttributes="Bold" />
+                <Label Text="TCGPlayer Prices"
+                       FontSize="18" FontAttributes="Bold" />
 
-                <Label Text="No sales data yet — eBay integration coming soon."
+                <Label Text="{Binding PriceSource}"
+                       FontSize="12" TextColor="Gray" />
+
+                <Label Text="No price data available for this card."
                        TextColor="Gray"
                        IsVisible="{Binding HasPrices, Converter={StaticResource InvertBoolConverter}}" />
 
-                <VerticalStackLayout IsVisible="{Binding HasPrices}" Spacing="8">
+                <CollectionView ItemsSource="{Binding Prices}"
+                                IsVisible="{Binding HasPrices}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:CardPrice">
+                            <Border Stroke="LightGray" StrokeThickness="1"
+                                    Padding="12" Margin="0,4">
+                                <Grid ColumnDefinitions="*, Auto, Auto, Auto">
 
-                    <Label Text="{Binding PriceNote}" TextColor="Gray" FontSize="12" />
+                                    <Label Grid.Column="0"
+                                           Text="{Binding Variant}"
+                                           FontAttributes="Bold"
+                                           VerticalOptions="Center" />
 
-                    <CollectionView ItemsSource="{Binding RecentSales}">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:EbaySalePrice">
-                                <Border Stroke="LightGray" StrokeThickness="1" Padding="12" Margin="0,4">
-                                    <Grid ColumnDefinitions="*, Auto">
-                                        <VerticalStackLayout Grid.Column="0">
-                                            <Label Text="{Binding ListingTitle}"
-                                                   FontAttributes="Bold"
-                                                   LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding Condition}" TextColor="Gray" FontSize="12" />
-                                            <Label Text="{Binding SoldDate, StringFormat='Sold: {0:MMM d, yyyy}'}"
-                                                   TextColor="Gray" FontSize="12" />
-                                        </VerticalStackLayout>
-                                        <Label Grid.Column="1"
-                                               Text="{Binding Price, StringFormat='${0:F2}'}"
-                                               FontSize="20"
-                                               FontAttributes="Bold"
-                                               TextColor="#2A75BB"
-                                               VerticalOptions="Center" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                                    <VerticalStackLayout Grid.Column="1" Margin="8,0">
+                                        <Label Text="Low" FontSize="11" TextColor="Gray" HorizontalOptions="Center"/>
+                                        <Label Text="{Binding Low, StringFormat='${0:F2}'}"
+                                               FontSize="13" HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
 
-                    <Label Text="{Binding AveragePrice, StringFormat='Average: ${0:F2}'}"
-                           FontAttributes="Bold"
-                           FontSize="16"
-                           HorizontalOptions="End" />
+                                    <VerticalStackLayout Grid.Column="2" Margin="8,0">
+                                        <Label Text="Market" FontSize="11" TextColor="Gray" HorizontalOptions="Center"/>
+                                        <Label Text="{Binding Market, StringFormat='${0:F2}'}"
+                                               FontSize="15" FontAttributes="Bold"
+                                               TextColor="#2A75BB" HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
 
-                </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="3" Margin="8,0">
+                                        <Label Text="High" FontSize="11" TextColor="Gray" HorizontalOptions="Center"/>
+                                        <Label Text="{Binding High, StringFormat='${0:F2}'}"
+                                               FontSize="13" HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
 
             </VerticalStackLayout>
 
             <Button Text="Scan Another Card"
                     Command="{Binding ScanAnotherCommand}"
-                    BackgroundColor="#E3350D"
-                    TextColor="White"
-                    CornerRadius="8"
-                    HeightRequest="52"
+                    BackgroundColor="#E3350D" TextColor="White"
+                    CornerRadius="8" HeightRequest="52"
                     Margin="0,16,0,0" />
 
         </VerticalStackLayout>

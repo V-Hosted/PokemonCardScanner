@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PokemonCardScanner.Infrastructure.Data;
 using PokemonCardScanner.Infrastructure.Data.Entities;
@@ -11,12 +10,9 @@ namespace PokemonCardScanner.Infrastructure.Services;
 public class CardScanOrchestrator(
     ICardRecognitionService recognition,
     IPokemonTcgService tcg,
-    IEbayService ebay,
     AppDbContext db,
     ILogger<CardScanOrchestrator> logger)
 {
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(24);
-
     public async Task<CardScanResponse> ScanAsync(CardScanRequest request)
     {
         byte[] imageBytes;
@@ -29,7 +25,7 @@ public class CardScanOrchestrator(
             return new CardScanResponse { Success = false, ErrorMessage = "Invalid image data." };
         }
 
-        // Step 1: OCR the card image
+        // Step 1: Identify card via Claude vision
         CardOcrResult ocr;
         try
         {
@@ -37,21 +33,22 @@ public class CardScanOrchestrator(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Azure Vision OCR failed");
+            logger.LogError(ex, "Claude vision recognition failed");
             return new CardScanResponse { Success = false, ErrorMessage = "Image recognition failed." };
         }
 
         if (string.IsNullOrWhiteSpace(ocr.CardName))
         {
             await LogScanAsync(null, false, ocr.RawText);
-            return new CardScanResponse { Success = false, ErrorMessage = "Could not read card name from image." };
+            return new CardScanResponse { Success = false, ErrorMessage = "Could not identify a Pokemon card in this image." };
         }
 
-        // Step 2: Match against Pokemon TCG API
+        // Step 2: Look up card + prices from Pokemon TCG API
         PokemonCard? card;
+        List<CardPrice> prices;
         try
         {
-            card = await tcg.FindCardAsync(ocr.CardName, ocr.CollectorNumber, ocr.SetCode);
+            (card, prices) = await tcg.FindCardAsync(ocr.CardName, ocr.CollectorNumber, ocr.SetCode);
         }
         catch (Exception ex)
         {
@@ -67,69 +64,13 @@ public class CardScanOrchestrator(
 
         await LogScanAsync(card, true, ocr.RawText);
 
-        // Step 3: Get eBay prices (cached)
-        var (prices, fromCache) = await GetPricesAsync(card);
-
         return new CardScanResponse
         {
             Success = true,
             Card = card,
-            RecentSales = prices,
-            PricesFromCache = fromCache
+            Prices = prices,
+            PricesFromCache = false
         };
-    }
-
-    private async Task<(List<EbaySalePrice> prices, bool fromCache)> GetPricesAsync(PokemonCard card)
-    {
-        var cutoff = DateTime.UtcNow - CacheDuration;
-        var cached = await db.EbayPriceCache
-            .Where(e => e.CardId == card.Id && e.CachedAt >= cutoff)
-            .OrderByDescending(e => e.SoldDate)
-            .Take(3)
-            .ToListAsync();
-
-        if (cached.Count > 0)
-        {
-            return (cached.Select(c => new EbaySalePrice
-            {
-                Price = c.Price,
-                Currency = c.Currency,
-                SoldDate = c.SoldDate,
-                Condition = c.Condition,
-                ListingTitle = c.ListingTitle,
-                ItemUrl = c.ItemUrl
-            }).ToList(), true);
-        }
-
-        List<EbaySalePrice> fresh;
-        try
-        {
-            fresh = await ebay.GetRecentSalesAsync(card);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "eBay price lookup failed for card '{Id}'", card.Id);
-            return ([], false);
-        }
-
-        if (fresh.Count > 0)
-        {
-            var now = DateTime.UtcNow;
-            db.EbayPriceCache.AddRange(fresh.Select(p => new EbayPriceCache
-            {
-                CardId = card.Id,
-                ListingTitle = p.ListingTitle,
-                Price = p.Price,
-                Currency = p.Currency,
-                SoldDate = p.SoldDate,
-                Condition = p.Condition,
-                ItemUrl = p.ItemUrl,
-                CachedAt = now
-            }));
-            await db.SaveChangesAsync();
-        }
-
-        return (fresh, false);
     }
 
     private async Task LogScanAsync(PokemonCard? card, bool found, string rawText, string? attemptedName = null)

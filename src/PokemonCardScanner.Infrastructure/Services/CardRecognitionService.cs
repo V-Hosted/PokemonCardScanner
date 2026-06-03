@@ -1,5 +1,6 @@
-using Azure;
-using Azure.AI.Vision.ImageAnalysis;
+using Anthropic.SDK;
+using Anthropic.SDK.Constants;
+using Anthropic.SDK.Messaging;
 using Microsoft.Extensions.Configuration;
 using PokemonCardScanner.Infrastructure.Services.Interfaces;
 
@@ -9,42 +10,87 @@ public class CardRecognitionService(IConfiguration config) : ICardRecognitionSer
 {
     public async Task<CardOcrResult> RecognizeCardAsync(byte[] imageBytes, string contentType)
     {
-        var endpoint = config["AzureVision:Endpoint"]
-            ?? throw new InvalidOperationException("AzureVision:Endpoint not configured");
-        var key = config["AzureVision:Key"]
-            ?? throw new InvalidOperationException("AzureVision:Key not configured");
+        var apiKey = config["Anthropic:ApiKey"]
+            ?? throw new InvalidOperationException("Anthropic:ApiKey not configured");
 
-        var client = new ImageAnalysisClient(new Uri(endpoint), new AzureKeyCredential(key));
+        var client = new AnthropicClient(apiKey);
 
-        using var stream = new MemoryStream(imageBytes);
-        var result = await client.AnalyzeAsync(
-            BinaryData.FromStream(stream),
-            VisualFeatures.Read);
+        var base64 = Convert.ToBase64String(imageBytes);
+        var mediaType = contentType switch
+        {
+            "image/png" => "image/png",
+            "image/gif" => "image/gif",
+            "image/webp" => "image/webp",
+            _ => "image/jpeg"
+        };
 
-        var allText = string.Join(" ", result.Value.Read.Blocks
-            .SelectMany(b => b.Lines)
-            .Select(l => l.Text));
+        var messages = new List<Message>
+        {
+            new()
+            {
+                Role = RoleType.User,
+                Content =
+                [
+                    new ImageContent
+                    {
+                        Source = new ImageSource
+                        {
+                            Type = "base64",
+                            MediaType = mediaType,
+                            Data = base64
+                        }
+                    },
+                    new TextContent
+                    {
+                        Text = """
+                               This is a Pokemon trading card. Please identify it and respond with ONLY a JSON object in this exact format, no other text:
+                               {
+                                 "name": "Pokemon name exactly as printed on the card",
+                                 "collector_number": "the number before the slash e.g. 025 from 025/198",
+                                 "set_code": "the set code if visible e.g. SVI, PAL, OBF",
+                                 "confidence": "high/medium/low"
+                               }
+                               If you cannot identify the card or it is not a Pokemon card, respond with:
+                               {"error": "reason"}
+                               """
+                    }
+                ]
+            }
+        };
 
-        var cardName = ExtractCardName(result.Value.Read);
-        var collectorNumber = ExtractCollectorNumber(allText);
+        var request = new MessageParameters
+        {
+            Messages = messages,
+            Model = AnthropicModels.Claude3Haiku,
+            MaxTokens = 200
+        };
 
-        return new CardOcrResult(cardName, collectorNumber, null, allText);
+        var response = await client.Messages.GetClaudeMessageAsync(request);
+        var raw = response.Content.OfType<TextContent>().FirstOrDefault()?.Text ?? "";
+
+        return ParseClaudeResponse(raw);
     }
 
-    private static string? ExtractCardName(ReadResult read)
+    private static CardOcrResult ParseClaudeResponse(string raw)
     {
-        // The card name is typically the largest text at the top of the card.
-        // We take the first non-numeric line with more than 2 characters.
-        return read.Blocks
-            .SelectMany(b => b.Lines)
-            .Select(l => l.Text.Trim())
-            .FirstOrDefault(t => t.Length > 2 && !t.All(c => char.IsDigit(c) || c == '/'));
-    }
+        try
+        {
+            var json = System.Text.Json.JsonDocument.Parse(raw.Trim());
+            var root = json.RootElement;
 
-    private static string? ExtractCollectorNumber(string text)
-    {
-        // Collector numbers appear as "NNN/TTT" e.g. "025/198"
-        var match = System.Text.RegularExpressions.Regex.Match(text, @"\b(\d{1,4})/(\d{1,4})\b");
-        return match.Success ? match.Groups[1].Value : null;
+            if (root.TryGetProperty("error", out _))
+                return new CardOcrResult(null, null, null, raw);
+
+            var name = root.TryGetProperty("name", out var n) ? n.GetString() : null;
+            var number = root.TryGetProperty("collector_number", out var cn) ? cn.GetString() : null;
+            var setCode = root.TryGetProperty("set_code", out var sc) ? sc.GetString() : null;
+
+            return new CardOcrResult(name, number, setCode, raw);
+        }
+        catch
+        {
+            // Claude returned something unexpected — try to extract a name from raw text
+            return new CardOcrResult(null, null, null, raw);
+        }
     }
 }

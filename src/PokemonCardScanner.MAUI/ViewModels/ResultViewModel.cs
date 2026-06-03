@@ -12,20 +12,18 @@ public partial class ResultViewModel : ObservableObject
     private CardScanResponse? _scanResult;
 
     public PokemonCard? Card => ScanResult?.Card;
-    public List<EbaySalePrice> RecentSales => ScanResult?.RecentSales ?? [];
+    public List<CardPrice> Prices => ScanResult?.Prices ?? [];
     public bool HasCard => Card is not null;
-    public bool HasPrices => RecentSales.Count > 0;
-    public string PriceNote => ScanResult?.PricesFromCache == true ? "Prices cached (< 24h old)" : "Live prices";
-    public decimal AveragePrice => HasPrices ? RecentSales.Average(p => p.Price) : 0;
+    public bool HasPrices => Prices.Count > 0;
+    public string PriceSource => HasPrices ? $"Prices via TCGPlayer · Updated {Prices[0].UpdatedAt:MMM d, yyyy}" : string.Empty;
 
     partial void OnScanResultChanged(CardScanResponse? value)
     {
         OnPropertyChanged(nameof(Card));
-        OnPropertyChanged(nameof(RecentSales));
+        OnPropertyChanged(nameof(Prices));
         OnPropertyChanged(nameof(HasCard));
         OnPropertyChanged(nameof(HasPrices));
-        OnPropertyChanged(nameof(PriceNote));
-        OnPropertyChanged(nameof(AveragePrice));
+        OnPropertyChanged(nameof(PriceSource));
     }
 
     [RelayCommand]
